@@ -1,0 +1,82 @@
+## Detailed Report: `stats` command issue and resolution
+
+### 1. Problem
+- Running assistant_cli.py in the terminal and typing `stats` produced:
+  - `Assistant: System monitoring is unavailable because psutil didn't load properly`
+
+### 2. Cause
+- assistant_cli.py uses this import guard:
+  ```python
+  try:
+      import psutil
+  except ImportError:
+      psutil = None
+  ```
+- The `stats` command then checks:
+  ```python
+  if psutil is None:
+      print("Assistant: System monitoring is unavailable because psutil didn't load properly")
+      return True
+  ```
+- So the command itself is fine; the fallback runs when the terminal Python does not have `psutil`.
+
+### 3. Root issue
+- `psutil` is installed in the project virtual environment:
+  - .venv
+- The terminal was running a different Python interpreter, not the .venv one.
+- That other interpreter did not have `psutil`, so import failed.
+
+### 4. Confirmed working fix
+- The solution that worked was **Option 2**:
+  1. Open PowerShell.
+  2. Change to the project folder:
+     ```powershell
+     cd C:\Users\akgue\Desktop\PythonProjects
+     ```
+  3. Run the script with the venv Python:
+     ```powershell
+     .venv\Scripts\python.exe assistant_cli.py
+     ```
+  4. In the program, type:
+     ```text
+     stats
+     ```
+
+### 5. Alternative fix to try first
+If someone else hits the same issue, try this first:
+
+#### Option 1: Activate the venv first
+1. Open PowerShell.
+2. Change to the project folder:
+   ```powershell
+   cd C:\Users\akgue\Desktop\PythonProjects
+   ```
+3. Activate the virtual environment:
+   ```powershell
+   .venv\Scripts\Activate.ps1
+   ```
+4. Run the script:
+   ```powershell
+   python assistant_cli.py
+   ```
+5. Type:
+   ```text
+   stats
+   ```
+
+### 6. Why this matters
+- `psutil` is only installed inside .venv.
+- If the terminal uses another Python install, `psutil` is missing.
+- Using python.exe or activating .venv makes sure the correct interpreter is used.
+
+### 7. Optional verification
+To verify the environment before running:
+```powershell
+cd C:\Users\akgue\Desktop\PythonProjects
+.venv\Scripts\python.exe -c "import psutil; print(psutil.__version__)"
+```
+
+### 8. Final note
+- The `stats` code is correct.
+- The real issue was environment selection.
+- Option 2 is the confirmed working fix for your setup, with Option 1 as the recommended first troubleshooting step.

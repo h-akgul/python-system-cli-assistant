@@ -1,0 +1,44 @@
+name: Build and Push Docker Image 
+on: 
+  push:
+    branches: ["main", "master"]
+  pull_request: 
+    branches: ["main", "master"]
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: '3.11'
+
+            - name: Install dependencies & Lint
+              run: |
+                python -m pip install --upgrade pip
+                pip install flake8 pytest
+                if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+                flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+            
+            - name: Log in to GitHub Container Registry (GHCR)
+              uses: docker/login-action@v3
+              with:
+                registry: ghcr.io
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build and Push Docker Image
+              uses: docker/build-push-action@v6
+              with:
+                context: .
+                push: true
+                tags: |
+                  ghcr.io/${{ github.repository_owner }}/lumina-assistant:latest
+                  ghcr.io/${{ github.repository_owner }}/lumina-assistant:${{ github.sha }}  
